@@ -1,0 +1,59 @@
+unescape scan framework nsa --format json --output results.json
+// main.go
+package main
+
+import (
+    "fmt"
+    "net/http"
+    "time"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    fmt.printf(w, "Current Date & Time: %s", time.Now().Format(time.RFC1123))
+}
+
+func main() {
+    http.HandleFunc("/", handler)
+    http.ListenAndServe(":8080", nil)
+}
+FROM golang:1.21
+WORKDIR /app
+COPY . .
+RUN go build -o app
+EXPOSE 8080
+CMD ["./app"]
+docker build -t yourdockerhub/date-time-app .
+docker push yourdockerhub/date-time-app
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datetime-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: datetime
+  template:
+    metadata:
+      labels:
+        app: datetime
+    spec:
+      containers:
+      - name: datetime
+        image: yourdockerhub/date-time-app
+        ports:
+        - containerPort: 8080
+apiVersion: v1
+kind: Service
+metadata:
+  name: datetime-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: datetime
+  ports:
+    - port: 80
+      targetPort: 8080
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
